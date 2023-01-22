@@ -1,4 +1,4 @@
-# Next.js API Builder
+# Next.js REST API Builder
 
 A simple, [tRPC](https://trpc.io)-like Next.js RESTful API builder based on [Zod](https://zod.dev) validation
 
@@ -10,7 +10,7 @@ First define your endpoint in the `[/src]/pages/api` directory
 // pages/api/hello.ts
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { createEndpoint, procedure } from ".";
+import { createEndpoint, procedure } from "@alan910127/next-api-builder";
 
 export default createEndpoint({
   get: procedure

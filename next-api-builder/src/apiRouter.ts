@@ -19,7 +19,7 @@ type ApiRoutes = {
   [field in HttpVerbs]?: Procedure;
 };
 
-export const buildEndpoint = (routes: ApiRoutes): ApiHandler => {
+export const createEndpoint = (routes: ApiRoutes): ApiHandler => {
   return (req: ApiRequest, res: ApiResponse) => {
     const method = req.method?.toLowerCase() as HttpVerbs;
     const route = routes[method];

@@ -1,0 +1,27 @@
+{
+  "name": "@alan910127/next-api-builder",
+  "version": "0.1.1",
+  "description": "A simple, tRPC-like Next.js RESTful API builder.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "tsc"
+  },
+  "keywords": [],
+  "author": "alan910127 <alan469357@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alan910127/next-api-builder.git"
+  },
+  "homepage": "https://github.com/alan910127/next-api-builder",
+  "dependencies": {
+    "zod": "^3.20.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "next": "^13.1.4",
+    "typescript": "^4.9.4"
+  }
+}
