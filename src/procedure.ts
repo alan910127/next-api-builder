@@ -49,7 +49,7 @@ const createProcedure = <
         ..._inner,
         handler: (req, res) => {
           const { query, body } = _inner;
-          const typedRequest = req as TypedApiRequest<Query, Body>;
+          const typedRequest = { ...req } as TypedApiRequest<Query, Body>;
 
           const error = [];
 
