@@ -1,13 +1,13 @@
 {
   "name": "@alan910127/next-api-builder",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "A simple, tRPC-like Next.js RESTful API builder.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "build": "rimraf dist && tsc",
-    "prepublish": "npm run build"
+    "prepublish": "pnpm build"
   },
   "keywords": [],
   "author": "alan910127 <alan469357@gmail.com>",
