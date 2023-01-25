@@ -25,9 +25,14 @@ export const createEndpoint = (routes: ApiRoutes): ApiHandler => {
     const route = routes[method];
 
     if (route == null) {
+      res.setHeader(
+        "Allow",
+        Object.keys(routes).map((method) => method.toUpperCase())
+      );
+
       return res
         .status(405)
-        .json({ error: `Method '${method.toUpperCase()}' is not allowed` });
+        .json({ error: `Method ${method.toUpperCase()} Not Allowed` });
     }
 
     const { handler } = route._inner;
