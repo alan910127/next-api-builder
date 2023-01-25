@@ -7,28 +7,36 @@ type ValidateRequest = {
   body: unknown;
 };
 
-export const validateRequest = ({
+const clone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj)) as T;
+
+export const validateRequest = <Query, Body, Err extends Error>({
   queryParsers,
   query,
   bodyParsers,
   body,
-}: ValidateRequest) => {
-  const errors: Error[] = [];
+}: ValidateRequest): {
+  errors: Err[];
+  query: Query;
+  body: Body;
+} => {
+  const errors: Err[] = [];
+  let typedQuery = clone(query);
+  let typedBody = clone(body);
 
   queryParsers?.forEach((parser) => {
     try {
-      parser(query);
+      typedQuery = parser(typedQuery);
     } catch (e) {
-      errors.push(e as Error);
+      errors.push(e as Err);
     }
   });
   bodyParsers?.forEach((parser) => {
     try {
-      parser(body);
+      typedBody = parser(typedBody);
     } catch (e) {
-      errors.push(e as Error);
+      errors.push(e as Err);
     }
   });
 
-  return errors;
+  return { query: typedQuery as Query, body: typedBody as Body, errors };
 };

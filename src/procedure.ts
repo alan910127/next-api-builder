@@ -13,40 +13,42 @@ import {
 import { validateRequest } from "./validate";
 import { zodErrorFormatter } from "./zodErrorFormatter";
 
-type ErrorFormatter = <E extends Error>(
-  errors: E[]
+type ErrorFormatter<Err extends Error> = (
+  errors: Err[]
 ) => (string | Record<string, string>)[];
 
-type ProcedureInner = {
+type ProcedureInner<Err extends Error> = {
   queryParsers: AnyParseFunction[];
   bodyParsers: AnyParseFunction[];
-  formatter: ErrorFormatter;
+  formatter: ErrorFormatter<Err>;
 };
 
-export type Procedure<Query, Body> = {
+export type Procedure<Query, Body, Err extends Error> = {
   /**
    * @internal
    */
-  _inner: ProcedureInner;
+  _inner: ProcedureInner<Err>;
 
   /**
    * Add a parser for the request query parameters
    */
   query: <P extends AnyParser>(
     schema: P
-  ) => Procedure<Query & InferParser<P>["out"], Body>;
+  ) => Procedure<Query & InferParser<P>["out"], Body, Err>;
 
   /**
    * Add a parser for the request body
    */
   body: <P extends AnyParser>(
     schema: P
-  ) => Procedure<Query, Body & InferParser<P>["out"]>;
+  ) => Procedure<Query, Body & InferParser<P>["out"], Err>;
 
   /**
    * Set a custom error formatter
    */
-  errorFormatter: (formatter: ErrorFormatter) => Procedure<Query, Body>;
+  errorFormatter: <E extends Error>(
+    formatter: ErrorFormatter<E>
+  ) => Procedure<Query, Body, E>;
 
   /**
    * Define a handler for the endpoint
@@ -59,25 +61,41 @@ export type Procedure<Query, Body> = {
   ) => ApiHandler;
 };
 
-const createNewProcedure = <Query, Body>(
-  previous: ProcedureInner,
-  next: Partial<ProcedureInner>
+type InnerWithoutFormatter = Omit<ProcedureInner<Error>, "formatter">;
+type InnerFormatter<Err extends Error> = Pick<ProcedureInner<Err>, "formatter">;
+
+const createFormatProcedure = <
+  Query,
+  Body,
+  Err extends Error,
+  ErrInput extends Error = Err
+>(
+  previous: ProcedureInner<Err>,
+  next: InnerFormatter<ErrInput>
+) => {
+  const _inner = { ...previous, formatter: next.formatter };
+  return createProcedure<Query, Body, ErrInput>(_inner);
+};
+
+const createNewProcedure = <Query, Body, Err extends Error>(
+  previous: ProcedureInner<Err>,
+  next: Partial<InnerWithoutFormatter>
 ) => {
   const _inner = {
     ...previous,
     queryParsers: [...previous.queryParsers, ...(next.queryParsers ?? [])],
     bodyParsers: [...previous.bodyParsers, ...(next.bodyParsers ?? [])],
   };
-  return createProcedure<Query, Body>(_inner);
+  return createProcedure<Query, Body, Err>(_inner);
 };
 
-const createProcedure = <Query, Body>(
-  initialState?: ProcedureInner
-): Procedure<Query, Body> => {
-  const _inner: ProcedureInner = initialState ?? {
+const createProcedure = <Query, Body, Err extends Error>(
+  initialState?: ProcedureInner<Err>
+): Procedure<Query, Body, Err> => {
+  const _inner: ProcedureInner<Err> = initialState ?? {
     queryParsers: [],
     bodyParsers: [],
-    formatter: zodErrorFormatter as ErrorFormatter,
+    formatter: zodErrorFormatter as unknown as ErrorFormatter<Err>,
   };
 
   return {
@@ -94,14 +112,14 @@ const createProcedure = <Query, Body>(
         bodyParsers: [fn],
       });
     },
-    errorFormatter: (formatter) => {
-      return createNewProcedure(_inner, {
+    errorFormatter: <E extends Error>(formatter: ErrorFormatter<E>) => {
+      return createFormatProcedure<Query, Body, Err, E>(_inner, {
         formatter,
       });
     },
     handler: (cb) => {
       return (req: ApiRequest, res: ApiResponse) => {
-        const errors = validateRequest({
+        const { query, body, errors } = validateRequest<Query, Body, Err>({
           ..._inner,
           query: req.query,
           body: req.body,
@@ -114,8 +132,7 @@ const createProcedure = <Query, Body>(
           });
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        return cb(req as any, res);
+        return cb({ ...req, query, body } as TypedApiRequest<Query, Body>, res);
       };
     },
   };
