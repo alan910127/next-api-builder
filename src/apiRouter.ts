@@ -1,5 +1,4 @@
-import { ApiHandler, ApiRequest, ApiResponse } from "./handler";
-import { Procedure } from "./procedure";
+import type { ApiHandler, ApiRequest, ApiResponse } from "./handler";
 
 const httpVerbs = [
   "get",
@@ -15,16 +14,16 @@ const httpVerbs = [
 
 type HttpVerbs = typeof httpVerbs[number];
 
-type ApiRoutes = {
-  [field in HttpVerbs]?: Procedure;
+type EndpointOptions = {
+  [field in HttpVerbs]?: ApiHandler;
 };
 
-export const createEndpoint = (routes: ApiRoutes): ApiHandler => {
+export const createEndpoint = (routes: EndpointOptions): ApiHandler => {
   return (req: ApiRequest, res: ApiResponse) => {
     const method = req.method?.toLowerCase() as HttpVerbs;
-    const route = routes[method];
+    const handler = routes[method];
 
-    if (route == null) {
+    if (handler == null) {
       res.setHeader(
         "Allow",
         Object.keys(routes).map((method) => method.toUpperCase())
@@ -34,8 +33,6 @@ export const createEndpoint = (routes: ApiRoutes): ApiHandler => {
         .status(405)
         .json({ error: `Method ${method.toUpperCase()} Not Allowed` });
     }
-
-    const { handler } = route._inner;
 
     return handler(req, res);
   };
