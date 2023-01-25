@@ -2,9 +2,36 @@
 
 A simple, [tRPC](https://trpc.io)-like Next.js RESTful API builder based on [Zod](https://zod.dev) validation
 
+## Installation
+
+### Requirements
+
+- Requirements of [Zod](https://github.com/colinhacks/zod#requirements)
+  - TypeScript 4.5+
+  - Make sure you enabled `strict` in your `tsconfig.json`.
+- Next.js
+
+### `npm`
+
+```bash
+npm install @alan910127/next-api-builder
+```
+
+### `yarn`
+
+```bash
+yarn add @alan910127/next-api-builder
+```
+
+### `pnpm`
+
+```bash
+pnpm add @alan910127/next-api-builder
+```
+
 ## Example Usage
 
-First define your endpoint in the `[/src]/pages/api` directory
+Create an endpoint in the `[/src]/pages/api` directory
 
 ```typescript
 // pages/api/hello.ts
@@ -46,4 +73,8 @@ export default createEndpoint({
 });
 ```
 
-Then you can access the endpoint with validation applied!
+## TODO
+
+- Add support for multiple input validation schemas
+  (For path parameters in dynamic routes or common input)
+- Add support for middlewares
