@@ -12,7 +12,7 @@ const httpMethods = [
   "patch",
 ] as const;
 
-type HttpMethod = typeof httpMethods[number];
+type HttpMethod = (typeof httpMethods)[number];
 
 type EndpointOptions = {
   [field in HttpMethod]?: ApiHandler;

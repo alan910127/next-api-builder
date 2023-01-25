@@ -1,27 +1,52 @@
-import type { ZodType } from "zod";
-import { formatErrors, validateRequest } from "./error";
-import type { ApiHandler, ApiResponse, TypedApiRequest } from "./handler";
+import type {
+  ApiHandler,
+  ApiRequest,
+  ApiResponse,
+  TypedApiRequest,
+} from "./handler";
+import {
+  getParseFunction,
+  type AnyParseFunction,
+  type AnyParser,
+  type InferParser,
+} from "./parser";
+import { validateRequest } from "./validate";
+import { zodErrorFormatter } from "./zodErrorFormatter";
 
-type ProcedureInner<Query extends ZodType, Body extends ZodType> = {
-  query?: Query;
-  body?: Body;
+type ErrorFormatter = <E extends Error>(
+  errors: E[]
+) => (string | Record<string, string>)[];
+
+type ProcedureInner = {
+  queryParsers: AnyParseFunction[];
+  bodyParsers: AnyParseFunction[];
+  formatter: ErrorFormatter;
 };
 
-export type Procedure<Query extends ZodType, Body extends ZodType> = {
+export type Procedure<Query, Body> = {
   /**
    * @internal
    */
-  _inner: ProcedureInner<Query, Body>;
+  _inner: ProcedureInner;
 
   /**
    * Add a parser for the request query parameters
    */
-  query: <Q extends ZodType>(schema: Q) => Procedure<Q, Body>;
+  query: <P extends AnyParser>(
+    schema: P
+  ) => Procedure<Query & InferParser<P>["out"], Body>;
 
   /**
    * Add a parser for the request body
    */
-  body: <B extends ZodType>(schema: B) => Procedure<Query, B>;
+  body: <P extends AnyParser>(
+    schema: P
+  ) => Procedure<Query, Body & InferParser<P>["out"]>;
+
+  /**
+   * Set a custom error formatter
+   */
+  errorFormatter: (formatter: ErrorFormatter) => Procedure<Query, Body>;
 
   /**
    * Define a handler for the endpoint
@@ -34,49 +59,63 @@ export type Procedure<Query extends ZodType, Body extends ZodType> = {
   ) => ApiHandler;
 };
 
-const createProcedure = <
-  Query extends ZodType = ZodType,
-  Body extends ZodType = ZodType
->(
-  initialState?: ProcedureInner<Query, Body>
+const createNewProcedure = <Query, Body>(
+  previous: ProcedureInner,
+  next: Partial<ProcedureInner>
+) => {
+  const _inner = {
+    ...previous,
+    queryParsers: [...previous.queryParsers, ...(next.queryParsers ?? [])],
+    bodyParsers: [...previous.bodyParsers, ...(next.bodyParsers ?? [])],
+  };
+  return createProcedure<Query, Body>(_inner);
+};
+
+const createProcedure = <Query, Body>(
+  initialState?: ProcedureInner
 ): Procedure<Query, Body> => {
-  const _inner = initialState ?? {};
+  const _inner: ProcedureInner = initialState ?? {
+    queryParsers: [],
+    bodyParsers: [],
+    formatter: zodErrorFormatter as ErrorFormatter,
+  };
 
   return {
     _inner,
     query: (schema) => {
-      return createProcedure({ ..._inner, query: schema });
+      const fn = getParseFunction(schema);
+      return createNewProcedure(_inner, {
+        queryParsers: [fn],
+      });
     },
     body: (schema) => {
-      return createProcedure({ ..._inner, body: schema });
+      const fn = getParseFunction(schema);
+      return createNewProcedure(_inner, {
+        bodyParsers: [fn],
+      });
+    },
+    errorFormatter: (formatter) => {
+      return createNewProcedure(_inner, {
+        formatter,
+      });
     },
     handler: (cb) => {
-      return (req, res) => {
-        const parsedRequest = validateRequest<Query, Body>({
-          querySchema: _inner.query,
+      return (req: ApiRequest, res: ApiResponse) => {
+        const errors = validateRequest({
+          ..._inner,
           query: req.query,
-          bodySchema: _inner.body,
           body: req.body,
         });
 
-        if (!parsedRequest.success) {
-          const formattedErrors = parsedRequest.errors.map((err) =>
-            formatErrors(err.format())
-          );
-
+        if (errors.length > 0) {
           return res.status(422).json({
-            error: formattedErrors,
+            message: "Invalid request",
+            errors: _inner.formatter(errors),
           });
         }
 
-        // FIXME: This won't work without using assertion
-        const typedRequest = {
-          ...req,
-          query: parsedRequest.query,
-          body: parsedRequest.body,
-        } as TypedApiRequest<Query, Body>;
-
-        return cb(typedRequest, res);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        return cb(req as any, res);
       };
     },
   };

@@ -1,2 +1,2 @@
-export { createEndpoint } from "./apiRouter";
+export { createEndpoint } from "./createEndpoint";
 export { procedure } from "./procedure";
