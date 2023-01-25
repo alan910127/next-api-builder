@@ -8,9 +8,24 @@ type ProcedureInner<Query extends ZodType, Body extends ZodType> = {
 };
 
 export type Procedure<Query extends ZodType, Body extends ZodType> = {
+  /**
+   * @internal
+   */
   _inner: ProcedureInner<Query, Body>;
+
+  /**
+   * Add a parser for the request query parameters
+   */
   query: <Q extends ZodType>(schema: Q) => Procedure<Q, Body>;
+
+  /**
+   * Add a parser for the request body
+   */
   body: <B extends ZodType>(schema: B) => Procedure<Query, B>;
+
+  /**
+   * Define a handler for the endpoint
+   */
   handler: (
     cb: (
       req: TypedApiRequest<Query, Body>,
