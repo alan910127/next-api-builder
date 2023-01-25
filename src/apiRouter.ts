@@ -1,6 +1,6 @@
 import type { ApiHandler, ApiRequest, ApiResponse } from "./handler";
 
-const httpVerbs = [
+const httpMethods = [
   "get",
   "head",
   "post",
@@ -12,15 +12,15 @@ const httpVerbs = [
   "patch",
 ] as const;
 
-type HttpVerbs = typeof httpVerbs[number];
+type HttpMethod = typeof httpMethods[number];
 
 type EndpointOptions = {
-  [field in HttpVerbs]?: ApiHandler;
+  [field in HttpMethod]?: ApiHandler;
 };
 
 export const createEndpoint = (routes: EndpointOptions): ApiHandler => {
   return (req: ApiRequest, res: ApiResponse) => {
-    const method = req.method?.toLowerCase() as HttpVerbs;
+    const method = req.method?.toLowerCase() as HttpMethod;
     const handler = routes[method];
 
     if (handler == null) {

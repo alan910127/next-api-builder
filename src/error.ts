@@ -12,7 +12,7 @@ export const formatErrors = (
     .filter(Boolean);
 };
 
-type MaybeValidated<Schema extends ZodType> = {
+type MayBeValidated<Schema extends ZodType> = {
   schema?: Schema;
   data: unknown;
 };
@@ -20,27 +20,21 @@ type MaybeValidated<Schema extends ZodType> = {
 const validate = <Schema extends ZodType>({
   schema,
   data,
-}: MaybeValidated<Schema>) => {
+}: MayBeValidated<Schema>) => {
   if (schema == null) {
     return null;
   }
   return schema.safeParse(data);
 };
 
-type ValidateRequest<
-  Query extends ZodType = ZodType,
-  Body extends ZodType = ZodType
-> = {
+type ValidateRequest<Query extends ZodType, Body extends ZodType> = {
   querySchema?: Query;
   query: unknown;
   bodySchema?: Body;
   body: unknown;
 };
 
-type ValidateRequestOutput<
-  Query extends ZodType = ZodType,
-  Body extends ZodType = ZodType
-> =
+type ValidateRequestOutput<Query extends ZodType, Body extends ZodType> =
   | {
       success: true;
       query: z.infer<Query>;
@@ -48,10 +42,7 @@ type ValidateRequestOutput<
     }
   | { success: false; errors: ZodError[] };
 
-export const validateRequest = <
-  Query extends ZodType = ZodType,
-  Body extends ZodType = ZodType
->({
+export const validateRequest = <Query extends ZodType, Body extends ZodType>({
   querySchema,
   query,
   bodySchema,

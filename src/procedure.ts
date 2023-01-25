@@ -2,18 +2,12 @@ import type { ZodType } from "zod";
 import { formatErrors, validateRequest } from "./error";
 import type { ApiHandler, ApiResponse, TypedApiRequest } from "./handler";
 
-type ProcedureInner<
-  Query extends ZodType = ZodType,
-  Body extends ZodType = ZodType
-> = {
+type ProcedureInner<Query extends ZodType, Body extends ZodType> = {
   query?: Query;
   body?: Body;
 };
 
-export type Procedure<
-  Query extends ZodType = ZodType,
-  Body extends ZodType = ZodType
-> = {
+export type Procedure<Query extends ZodType, Body extends ZodType> = {
   _inner: ProcedureInner<Query, Body>;
   query: <Q extends ZodType>(schema: Q) => Procedure<Q, Body>;
   body: <B extends ZodType>(schema: B) => Procedure<Query, B>;
@@ -35,11 +29,11 @@ const createProcedure = <
 
   return {
     _inner,
-    query: <QueryInput extends ZodType>(schema: QueryInput) => {
-      return createProcedure<QueryInput, Body>({ ..._inner, query: schema });
+    query: (schema) => {
+      return createProcedure({ ..._inner, query: schema });
     },
-    body: <BodyInput extends ZodType>(schema: BodyInput) => {
-      return createProcedure<Query, BodyInput>({ ..._inner, body: schema });
+    body: (schema) => {
+      return createProcedure({ ..._inner, body: schema });
     },
     handler: (cb) => {
       return (req, res) => {
