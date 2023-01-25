@@ -1,5 +1,6 @@
 import { NextApiHandler } from "next";
 import { ZodType } from "zod";
+import { formatErrors, validateRequest } from "./error";
 import { ApiResponse, TypedApiRequest } from "./handler";
 
 type ProcedureInner<
@@ -48,32 +49,29 @@ const createProcedure = <
       return createProcedure<Query, Body>({
         ..._inner,
         handler: (req, res) => {
-          const { query, body } = _inner;
-          const typedRequest = { ...req } as TypedApiRequest<Query, Body>;
+          const parsedRequest = validateRequest<Query, Body>({
+            querySchema: _inner.query,
+            query: req.query,
+            bodySchema: _inner.body,
+            body: req.body,
+          });
 
-          const error = [];
+          if (!parsedRequest.success) {
+            const formattedErrors = parsedRequest.errors.map((err) =>
+              formatErrors(err.format())
+            );
 
-          if (query != null) {
-            const parsedQuery = query.safeParse(req.query);
-            if (!parsedQuery.success) {
-              error.push(parsedQuery.error);
-            } else {
-              typedRequest.query = parsedQuery.data;
-            }
+            return res.status(422).json({
+              error: formattedErrors,
+            });
           }
 
-          if (body != null) {
-            const parsedBody = body.safeParse(req.body);
-            if (!parsedBody.success) {
-              error.push(parsedBody.error);
-            } else {
-              typedRequest.body = parsedBody.data;
-            }
-          }
-
-          if (error.length > 0) {
-            return res.status(422).json({ error });
-          }
+          // FIXME: This won't work without using assertion
+          const typedRequest = {
+            ...req,
+            query: parsedRequest.query,
+            body: parsedRequest.body,
+          } as TypedApiRequest<Query, Body>;
 
           return cb(typedRequest, res);
         },
