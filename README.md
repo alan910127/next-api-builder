@@ -68,12 +68,14 @@ export default createEndpoint({
 });
 ```
 
-## Warning
+## Caveat
 
 If you're using `zod`, you should always use `z.coerce.{type}()` for non-string types instead of using `z.{type}()` directly, or the requests will be rejected due to typing issues.
 
 ## TODO
 
+- Add support for yup validation
+- Add support openapi generation
 - Add support for multiple input validation schemas
   (For path parameters in dynamic routes or common input)
 - Add support for middlewares
