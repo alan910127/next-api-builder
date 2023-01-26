@@ -16,12 +16,17 @@ type YupParser<T> = {
   validateSync: SyncParseFunction<T>;
 };
 
+type JoiParser<T> = {
+  validate: SyncParseFunction<T>;
+};
+
 type CustomParser<T> = ParseFunction<T>;
 
 export type Parser<T> =
   | ZodParser<T>
   | SuperStructParser<T>
   | YupParser<T>
+  | JoiParser<T>
   | CustomParser<T>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,7 +52,7 @@ export const getParseFunction = <T>(
     return parser;
   }
 
-  const fields = ["parse", "validateSync", "create"] as const;
+  const fields = ["parse", "validateSync", "validate", "create"] as const;
 
   for (const field of fields) {
     if (typeof parser[field] === "function") {
