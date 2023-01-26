@@ -26,8 +26,14 @@ export const createEndpoint = (routes: EndpointOptions): ApiHandler => {
     if (handler == null) {
       res.setHeader(
         "Allow",
-        Object.keys(routes).map((method) => method.toUpperCase())
+        ["options", ...Object.keys(routes)].map((method) =>
+          method.toUpperCase()
+        )
       );
+
+      if (method === "options") {
+        return res.status(204).end();
+      }
 
       return res
         .status(405)
