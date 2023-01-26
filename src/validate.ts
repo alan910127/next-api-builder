@@ -9,34 +9,46 @@ type ValidateRequest = {
 
 const clone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj)) as T;
 
+const combine = <T1, T2>(obj1: T1, obj2: T2): T1 & T2 => {
+  if (typeof obj1 === "object" && typeof obj2 === "object") {
+    return { ...obj1, ...obj2 };
+  }
+  return clone(obj2) as T1 & T2;
+};
+
 export const validateRequest = <Query, Body, Err extends Error>({
   queryParsers,
   query,
   bodyParsers,
   body,
 }: ValidateRequest): {
-  errors: Err[];
   query: Query;
   body: Body;
+  errors: Err[];
 } => {
   const errors: Err[] = [];
-  let typedQuery = clone(query);
-  let typedBody = clone(body);
+  let parsedQuery = clone(query);
+  let parsedBody = clone(body);
 
   queryParsers?.forEach((parser) => {
     try {
-      typedQuery = parser(typedQuery);
-    } catch (e) {
-      errors.push(e as Err);
-    }
-  });
-  bodyParsers?.forEach((parser) => {
-    try {
-      typedBody = parser(typedBody);
+      parsedQuery = combine(parsedQuery, parser(query));
     } catch (e) {
       errors.push(e as Err);
     }
   });
 
-  return { query: typedQuery as Query, body: typedBody as Body, errors };
+  bodyParsers?.forEach((parser) => {
+    try {
+      parsedBody = combine(parsedBody, parser(body));
+    } catch (e) {
+      errors.push(e as Err);
+    }
+  });
+
+  return {
+    query: parsedQuery as Query,
+    body: parsedBody as Body,
+    errors,
+  };
 };
