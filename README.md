@@ -28,6 +28,12 @@ pnpm add @alan910127/next-api-builder zod
 
 ## Quick Start
 
+### Caveat
+
+If you're using `zod`, you should always use `z.coerce.{type}()` for non-string types instead of using `z.{type}()` directly, or the requests will be rejected due to typing issues.
+
+### Static Routes
+
 ```typescript
 // pages/api/hello.ts
 import { randomUUID } from "crypto";
@@ -68,15 +74,37 @@ export default createEndpoint({
 });
 ```
 
-## Caveat
+### Dynamic Routes
 
-If you're using `zod`, you should always use `z.coerce.{type}()` for non-string types instead of using `z.{type}()` directly, or the requests will be rejected due to typing issues.
+```typescript
+import { createEndpoint, procedure } from "@alan910127/next-api-builder";
+import { z } from "zod";
+
+const routeProcedure = procedure.query(
+  z.object({
+    userId: z.string().uuid(),
+  })
+);
+
+export default createEndpoint({
+  get: routeProcedure
+    .query(
+      z.object({
+        name: z.string().optional(),
+      })
+    )
+    .handler(async (req, res) => {
+      const { userId, name } = req.query;
+      //                           ^? (property) query: { userId: string; } & { name?: string | undefined; }
+      const username = name ?? userId;
+      res.status(200).send(`Hello ${userId}, your name is ${username}.`);
+      return `Hello ${userId}, your name is ${username}.`;
+    }),
+});
+```
 
 ## TODO
 
-- Add support for yup validation
 - Add support openapi generation
-- Add support for multiple input validation schemas
-  (For path parameters in dynamic routes or common input)
 - Add support for middlewares
 - Automatic coercion for primitives
