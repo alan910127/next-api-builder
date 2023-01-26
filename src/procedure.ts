@@ -23,6 +23,11 @@ type ProcedureInner<Err extends Error> = {
   formatter: ErrorFormatter<Err>;
 };
 
+type TypedApiHandler<Query, Body> = (
+  req: TypedApiRequest<Query, Body>,
+  res: ApiResponse
+) => unknown | Promise<unknown>;
+
 export type Procedure<Query, Body, Err extends Error> = {
   /**
    * @internal
@@ -53,12 +58,7 @@ export type Procedure<Query, Body, Err extends Error> = {
   /**
    * Define a handler for the endpoint
    */
-  handler: (
-    cb: (
-      req: TypedApiRequest<Query, Body>,
-      res: ApiResponse
-    ) => unknown | Promise<unknown>
-  ) => ApiHandler;
+  handler: (cb: TypedApiHandler<Query, Body>) => ApiHandler;
 };
 
 type InnerWithoutFormatter = Omit<ProcedureInner<Error>, "formatter">;

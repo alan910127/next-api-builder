@@ -2,6 +2,18 @@
 
 A simple, [tRPC](https://trpc.io)-like Next.js RESTful API builder based on [Zod](https://zod.dev) validation
 
+## Table of Contents
+
+- [Installation](#installation)
+  - [npm](#npm)
+  - [yarn](#yarn)
+  - [pnpm](#pnpm)
+- [Example Usage](#example-usage)
+  - [Caveat](#caveat)
+  - [Static Routes](#static-routes)
+  - [Dynamic Routes](#dynamic-routes)
+- [TODO](#todo)
+
 ## Installation
 
 > Zod is now removed from the dependency, as a result, you need to install zod manually or choose any validation library as you desired.
@@ -26,7 +38,7 @@ yarn add @alan910127/next-api-builder zod
 pnpm add @alan910127/next-api-builder zod
 ```
 
-## Quick Start
+## Example Usage
 
 ### Caveat
 
@@ -35,24 +47,26 @@ If you're using `zod`, you should always use `z.coerce.{type}()` for non-string 
 ### Static Routes
 
 ```typescript
-// pages/api/hello.ts
+// pages/api/hello/index.ts
+import { createEndpoint, procedure } from "@alan910127/next-api-builder";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { createEndpoint, procedure } from "@alan910127/next-api-builder";
 
 export default createEndpoint({
   get: procedure
     .query(
       z.object({
-        text: z.string().optional(),
+        text: z.string(),
+        age: z.coerce.number().nonnegative().optional(),
       })
     )
-    .handler(async (req, res) => {
-      const text = req.query.text ?? "world";
-      //               ^? (property): query: { text?: string | undefined; }
-      res.status(200).send(`Hello ${text}`);
+    .handler(async ({ query: { text, age } }) => {
+      //              ^? (property) query: { age?: number | undefined; text: string; }
+      return {
+        greeting: `Hello ${text}`,
+        age,
+      };
     }),
-
   post: procedure
     .body(
       z.object({
@@ -60,19 +74,143 @@ export default createEndpoint({
         age: z.coerce.number().nonnegative(),
       })
     )
-    .handler(async (req, res) => {
-      const { name, age } = req.body;
-      //                        ^? (property): body: { name: string; age: number; }
-      res.status(201).json({
+    .handler(async ({ body: { name, age } }, res) => {
+      //              ^? (property) body: { age: number; name: string; }
+
+      // Create some records in datebase...
+      res.status(201);
+      return {
         id: randomUUID(),
         name,
         age,
-      });
+      };
     }),
 
   // ...put, delete etc.
 });
 ```
+
+#### Example Response
+
+- GET without parameters:
+
+  ```
+  GET http://localhost:3000/api/hello
+  ```
+
+  Status: 422 Unprocessable Entity
+
+  ```json
+  {
+    "message": "Invalid request",
+    "errors": [
+      {
+        "text": "Required"
+      }
+    ]
+  }
+  ```
+
+- GET with required parameters:
+
+  ```
+  GET http://localhost:3000/api/hello?text=Next.js
+  ```
+
+  Status: 200 OK
+
+  ```json
+  {
+    "greeting": "Hello Next.js"
+  }
+  ```
+
+- GET with incorrect optional paramters:
+
+  ```
+  GET http://localhost:3000/api/hello?text=Next.js&age=test
+  ```
+
+  Status: 422 Unprocessable Entity
+
+  ```json
+  {
+    "message": "Invalid request",
+    "errors": [
+      {
+        "age": "Expected number, received nan"
+      }
+    ]
+  }
+  ```
+
+- GET with correct parameters:
+
+  ```
+  GET http://localhost:3000/api/hello?text=Next.js&age=18
+  ```
+
+  Status: 200 OK
+
+  ```json
+  {
+    "greeting": "Hello Next.js",
+    "age": 18
+  }
+  ```
+
+- GET with extra parameters:
+
+  ```
+  http://localhost:3000/api/hello?text=Next.js&age=18&extra=param
+  ```
+
+  Status: 200 OK
+
+  ```json
+  {
+    "greeting": "Hello Next.js",
+    "age": 18
+  }
+  ```
+
+- POST with empty body
+
+  ```
+  POST http://localhost:3000/api/hello
+  ```
+
+  Status: 422 Unprocessable Entity
+
+  ```json
+  {
+    "message": "Invalid request",
+    "errors": ["Expected object, received string"]
+  }
+  ```
+
+- POST with correct body
+
+  ```
+  POST http://localhost:3000/api/hello
+  ```
+
+  ```json
+  {
+    "name": "Next.js",
+    "age": "18"
+  }
+  ```
+
+  Status: 201 Created
+
+  ```json
+  {
+    "id": "8a9ebe33-f967-4e6d-8780-eb992e8ddd24",
+    "name": "Next.js",
+    "age": 18
+  }
+  ```
 
 ### Dynamic Routes
 
@@ -93,15 +231,27 @@ export default createEndpoint({
         name: z.string().optional(),
       })
     )
-    .handler(async (req, res) => {
-      const { userId, name } = req.query;
-      //                           ^? (property) query: { userId: string; } & { name?: string | undefined; }
+    .handler(async ({ query: { userId, name } }, res) => {
+      //              ^? (property) query: { userId: string; } & { name?: string | undefined; }
       const username = name ?? userId;
-      res.status(200).send(`Hello ${userId}, your name is ${username}.`);
       return `Hello ${userId}, your name is ${username}.`;
     }),
 });
 ```
+
+#### Example Response
+
+- GET with correct fields
+
+  ```
+  GET http://localhost:3000/api/hello/8a9ebe33-f967-4e6d-8780-eb992e8ddd24?name=Next.js
+  ```
+
+  Status: 200 OK
+
+  ```
+  Hello 8a9ebe33-f967-4e6d-8780-eb992e8ddd24, your name is Next.js.
+  ```
 
 ## TODO
 

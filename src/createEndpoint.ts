@@ -19,9 +19,13 @@ type EndpointOptions = {
 };
 
 export const createEndpoint = (routes: EndpointOptions): ApiHandler => {
-  return (req: ApiRequest, res: ApiResponse) => {
+  return async (req: ApiRequest, res: ApiResponse) => {
     const method = req.method?.toLowerCase() as HttpMethod;
-    const handler = routes[method];
+    let handler = routes[method];
+
+    if (method === "head" && handler == null) {
+      handler = routes.get;
+    }
 
     if (handler == null) {
       res.setHeader(
@@ -40,6 +44,12 @@ export const createEndpoint = (routes: EndpointOptions): ApiHandler => {
         .json({ error: `Method ${method.toUpperCase()} Not Allowed` });
     }
 
-    return handler(req, res);
+    try {
+      const result = await handler(req, res);
+      res.send(result);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: "Something went wrong" });
+    }
   };
 };
