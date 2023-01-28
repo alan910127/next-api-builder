@@ -16,6 +16,11 @@ const combine = <T1, T2>(obj1: T1, obj2: T2): T1 & T2 => {
   return clone(obj2) as T1 & T2;
 };
 
+type ParsingError<Err> = {
+  query: Err[];
+  body: Err[];
+};
+
 export const validateRequest = <Query, Body, Err extends Error>({
   queryParsers,
   query,
@@ -24,9 +29,10 @@ export const validateRequest = <Query, Body, Err extends Error>({
 }: ValidateRequest): {
   query: Query;
   body: Body;
-  errors: Err[];
+  errors: ParsingError<Err>;
+  isError: boolean;
 } => {
-  const errors: Err[] = [];
+  const errors: ParsingError<Err> = { query: [], body: [] };
   let parsedQuery = clone(query);
   let parsedBody = clone(body);
 
@@ -34,7 +40,7 @@ export const validateRequest = <Query, Body, Err extends Error>({
     try {
       parsedQuery = combine(parsedQuery, parser(query));
     } catch (e) {
-      errors.push(e as Err);
+      errors.query.push(e as Err);
     }
   });
 
@@ -42,7 +48,7 @@ export const validateRequest = <Query, Body, Err extends Error>({
     try {
       parsedBody = combine(parsedBody, parser(body));
     } catch (e) {
-      errors.push(e as Err);
+      errors.body.push(e as Err);
     }
   });
 
@@ -50,5 +56,6 @@ export const validateRequest = <Query, Body, Err extends Error>({
     query: parsedQuery as Query,
     body: parsedBody as Body,
     errors,
+    isError: errors.query.length > 0 || errors.body.length > 0,
   };
 };

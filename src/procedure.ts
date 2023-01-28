@@ -117,16 +117,26 @@ const createProcedure = <Query, Body, Err extends Error>(
     },
     handler: (cb) => {
       return (req: ApiRequest, res: ApiResponse) => {
-        const { query, body, errors } = validateRequest<Query, Body, Err>({
+        const { query, body, errors, isError } = validateRequest<
+          Query,
+          Body,
+          Err
+        >({
           ..._inner,
           query: req.query,
           body: req.body,
         });
 
-        if (errors.length > 0) {
+        if (isError) {
+          const formatter = _inner.formatter;
+          const queryErrors = formatter(errors.query);
+          const bodyErrors = formatter(errors.body);
           return res.status(422).json({
             message: "Invalid request",
-            errors: _inner.formatter(errors),
+            errors: {
+              query: queryErrors || undefined,
+              body: bodyErrors || undefined,
+            },
           });
         }
 
