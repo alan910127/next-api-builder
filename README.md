@@ -8,10 +8,12 @@ A simple, [tRPC](https://trpc.io)-like Next.js RESTful API builder based on [Zod
   - [npm](#npm)
   - [yarn](#yarn)
   - [pnpm](#pnpm)
+- [Features](#features)
 - [Example Usage](#example-usage)
   - [Caveat](#caveat)
   - [Static Routes](#static-routes)
   - [Dynamic Routes](#dynamic-routes)
+  - [Custom Error Formatter](#custom-error-formatter)
 - [TODO](#todo)
 
 ## Installation
@@ -37,6 +39,17 @@ yarn add @alan910127/next-api-builder zod
 ```bash
 pnpm add @alan910127/next-api-builder zod
 ```
+
+## Features
+
+- Automatic type inference from input schema
+
+- Auto-generated `OPTIONS` request handler according to methods provided
+
+- Auto-generated `HEAD` request handler according to `GET` request handler provided
+
+- Easy to customize error formatter for validation-related error responses
+  - You might need to specify your own error formatter if you're not using `zod` to define validation schemas
 
 ## Example Usage
 
@@ -104,11 +117,11 @@ export default createEndpoint({
   ```json
   {
     "message": "Invalid request",
-    "errors": [
-      {
+    "errors": {
+      "query": {
         "text": "Required"
       }
-    ]
+    }
   }
   ```
 
@@ -137,11 +150,11 @@ export default createEndpoint({
   ```json
   {
     "message": "Invalid request",
-    "errors": [
-      {
+    "errors": {
+      "query": {
         "age": "Expected number, received nan"
       }
-    ]
+    }
   }
   ```
 
@@ -183,12 +196,32 @@ export default createEndpoint({
 
   Status: 422 Unprocessable Entity
 
-  ```json
-  {
-    "message": "Invalid request",
-    "errors": ["Expected object, received string"]
-  }
-  ```
+  - Without header `Content-Type: application/json`
+
+    ```json
+    {
+      "message": "Invalid request",
+      "errors": {
+        "body": {
+          "parent": "Expected object, received string"
+        }
+      }
+    }
+    ```
+
+  - With header `Content-Type: application/json`
+
+    ```json
+    {
+      "message": "Invalid request",
+      "errors": {
+        "body": {
+          "name": "Required",
+          "age": "Expected number, received nan"
+        }
+      }
+    }
+    ```
 
 - POST with correct body
 
@@ -223,7 +256,7 @@ import { z } from "zod";
 
 const routeProcedure = procedure.query(
   z.object({
-    userId: z.string().uuid(),
+    userId: z.string().uuid("Should be uuid"),
   })
 );
 
@@ -234,7 +267,7 @@ export default createEndpoint({
         name: z.string().optional(),
       })
     )
-    .handler(async ({ query: { userId, name } }, res) => {
+    .handler(async ({ query: { userId, name } }) => {
       //              ^? (property) query: { userId: string; } & { name?: string | undefined; }
       const username = name ?? userId;
       return `Hello ${userId}, your name is ${username}.`;
@@ -243,6 +276,23 @@ export default createEndpoint({
 ```
 
 #### Example Response
+
+- GET with incorrect fields with custom error message in zod schema
+
+  ```
+  GET http://localhost:3000/api/hello/test
+  ```
+
+  ```json
+  {
+    "message": "Invalid request",
+    "errors": {
+      "query": {
+        "userId": "Should be uuid"
+      }
+    }
+  }
+  ```
 
 - GET with correct fields
 
@@ -255,6 +305,21 @@ export default createEndpoint({
   ```
   Hello 8a9ebe33-f967-4e6d-8780-eb992e8ddd24, your name is Next.js.
   ```
+
+### Custom Error Formatter
+
+```typescript
+import { createEndpoint, procedure } from "@alan910127/next-api-builder";
+
+const formattedProcedure = procedure.errorFormatter(() => "there's an error!");
+
+export default createEndpoint({
+  get: formattedProcedure // <-- here!
+    .query(...)
+    .handler(...)
+    // ...
+});
+```
 
 ## TODO
 
