@@ -42,12 +42,13 @@ pnpm add @alan910127/next-api-builder zod
 
 ### Caveat
 
-If you're using `zod`, you should always use `z.coerce.{type}()` for non-string types instead of using `z.{type}()` directly, or the requests will be rejected due to typing issues.
+If you're using `zod` to define validation schemas, you should always use `z.coerce.{type}()` for **non-string types** instead of using `z.{type}()` directly, or the requests will be rejected due to typing issues.
 
 ### Static Routes
 
 ```typescript
 // pages/api/hello/index.ts
+
 import { createEndpoint, procedure } from "@alan910127/next-api-builder";
 import { randomUUID } from "crypto";
 import { z } from "zod";
@@ -215,6 +216,8 @@ export default createEndpoint({
 ### Dynamic Routes
 
 ```typescript
+// pages/api/hello/[userId].ts
+
 import { createEndpoint, procedure } from "@alan910127/next-api-builder";
 import { z } from "zod";
 
