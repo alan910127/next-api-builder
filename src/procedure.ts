@@ -11,11 +11,9 @@ import {
   type InferParser,
 } from "./parser";
 import { validateRequest } from "./validate";
-import { zodErrorFormatter } from "./zodErrorFormatter";
+import { bathcZodErrorFormatter } from "./zodErrorFormatter";
 
-type ErrorFormatter<Err extends Error> = (
-  errors: Err[]
-) => (string | Record<string, string>)[];
+type ErrorFormatter<Err extends Error> = (errors: Err[]) => unknown;
 
 type ProcedureInner<Err extends Error> = {
   queryParsers: AnyParseFunction[];
@@ -95,7 +93,7 @@ const createProcedure = <Query, Body, Err extends Error>(
   const _inner: ProcedureInner<Err> = initialState ?? {
     queryParsers: [],
     bodyParsers: [],
-    formatter: zodErrorFormatter as unknown as ErrorFormatter<Err>,
+    formatter: bathcZodErrorFormatter as unknown as ErrorFormatter<Err>,
   };
 
   return {

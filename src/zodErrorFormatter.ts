@@ -1,24 +1,16 @@
 import type { ZodError } from "zod";
 
-export const zodErrorFormatter = (errors: ZodError<Map<string, string>>[]) => {
+export const zodErrorFormatter = (error: ZodError) => {
+  return Object.fromEntries(
+    error.errors.map(({ path, message }) => [path.join("."), message])
+  );
+};
+
+export const bathcZodErrorFormatter = (errors: ZodError[]) => {
   return errors
-    .map(
-      (error) =>
-        Object.entries(error.format())
-          .map(([field, value]) => {
-            if (
-              field === "_errors" &&
-              Array.isArray(value) &&
-              value.length > 0
-            ) {
-              return value;
-            }
-            if (value && "_errors" in value) {
-              return { [field]: value._errors.join(", ") };
-            }
-          })
-          .flat()
-          .filter(Boolean) as Record<string, string>[]
-    )
-    .flat();
+    .map(zodErrorFormatter)
+    .reduce(
+      (previousObj, currentObj) => ({ ...previousObj, ...currentObj }),
+      {}
+    );
 };
